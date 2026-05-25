@@ -6,19 +6,19 @@ import { z } from "zod";
 // Schema de validação local
 const loginSchema = z.object({
   email: z.string().email("E-mail inválido"),
-  password: z.string().min(1, "Senha é obrigatória"),
+  senha: z.string().min(1, "Senha é obrigatória"),
 });
 
 // Funções de hash com Web Crypto API
-async function hashPassword(password: string): Promise<string> {
+async function hashPassword(senha: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(password);
+  const data = encoder.encode(senha);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return Buffer.from(hash).toString("hex");
 }
 
-async function verifyPassword(password: string, hashed: string): Promise<boolean> {
-  const hash = await hashPassword(password);
+async function verifyPassword(senha: string, hashed: string): Promise<boolean> {
+  const hash = await hashPassword(senha);
   return hash === hashed;
 }
 
@@ -27,16 +27,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Senha", type: "password" },
+        senha: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
         const validated = loginSchema.safeParse(credentials);
         if (!validated.success) return null;
 
-        const { email, password } = validated.data;
+        const { email, senha } = validated.data;
         const user = await prisma.usuario.findUnique({ where: { email } });
 
-        if (user && (await verifyPassword(password, user.senhaHash))) {
+        if (user && (await verifyPassword(senha, user.senhaHash))) {
           return {
             id: user.id,
             email: user.email,
