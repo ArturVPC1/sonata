@@ -1,9 +1,10 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  serverExternalPackages: ["@prisma/client", "bcryptjs"], // se ainda tiver bcryptjs, mas remova
-  experimental: {
-    serverComponentsExternalPackages: ["@prisma/client"],
-  },
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  serverExternalPackages: ["@prisma/client"], // 👈 sem "experimental"
+  // Se quiser manter Turbopack local, adicione:
+  // turbopack: {},
 };
 
-export default nextConfig;  
+export default nextConfig;
