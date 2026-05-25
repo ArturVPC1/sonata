@@ -2,9 +2,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client"], // 👈 sem "experimental"
-  // Se quiser manter Turbopack local, adicione:
-  // turbopack: {},
+  serverExternalPackages: ["@prisma/client"], // ✅ sem experimental
 };
 
 export default nextConfig;
