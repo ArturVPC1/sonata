@@ -51,7 +51,7 @@ export default function LoginPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Music className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold">ERP Escola de Música</h1>
+          <h1 className="text-2xl font-bold">Sonata, um Web App para Escolas de Música</h1>
           <p className="text-sm text-muted-foreground">
             Entre com suas credenciais para acessar o sistema
           </p>

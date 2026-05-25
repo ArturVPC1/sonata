@@ -44,9 +44,9 @@ export function Sidebar({ user }: SidebarProps) {
           <Music className="h-4 w-4" />
         </div>
         <span className="font-bold text-sm leading-tight">
-          ERP Escola
+          SONATA, um Web App
           <br />
-          <span className="text-muted-foreground font-normal">de Música</span>
+          <span className="text-muted-foreground font-normal">Para Escolas de Música</span>
         </span>
       </div>
 
