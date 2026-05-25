@@ -4,7 +4,6 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 
-// 🔐 Substitui bcryptjs com Web Crypto API (Edge-compatible)
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
@@ -40,7 +39,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     authorized({ request, auth }) {
-      // ✅ Roda no middleware – sem Prisma, sem bcrypt
       const { pathname } = request.nextUrl;
       if (pathname === "/login") return true;
       return !!auth;
