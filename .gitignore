@@ -1,3 +1,4 @@
+
 # dependencies
 /node_modules
 /.pnp
@@ -32,3 +33,37 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+# Banco de dados local (se você usar SQLite, por exemplo)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs adicionais
+*.log
+logs/
+
+# Cache de dependências (caso gere)
+.cache/
+.parcel-cache/
+
+# Arquivos temporários do editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Arquivos de sistema do Windows
+Thumbs.db
+desktop.ini
+
+# Arquivos de backup
+*.bak
+*.orig
