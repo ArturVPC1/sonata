@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  SECRETARIA
+  PROFESSOR
+}
+
+enum DiaSemana {
+  DOMINGO
+  SEGUNDA
+  TERCA
+  QUARTA
+  QUINTA
+  SEXTA
+  SABADO
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  role      UserRole
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  professor Professor?
+}
+
+model Aluno {
+  id        String    @id @default(cuid())
+  nome      String
+  email     String    @unique
+  telefone  String?
+  dataNasc  DateTime?
+  cpf       String?   @unique
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  matriculas Matricula[]
+  pagamentos Pagamento[]
+}
+
+model Professor {
+  id        String   @id @default(cuid())
+  usuarioId String   @unique
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turmas Turma[]
+}
+
+model Instrumento {
+  id    String  @id @default(cuid())
+  nome  String  @unique
+  icone String?
+
+  turmas Turma[]
+}
+
+model Turma {
+  id            String      @id @default(cuid())
+  nome          String
+  instrumentoId String
+  instrumento   Instrumento @relation(fields: [instrumentoId], references: [id])
+  professorId   String
+  professor     Professor   @relation(fields: [professorId], references: [id])
+  diaSemana     DiaSemana
+  horario       String
+  duracaoMin    Int         @default(60)
+  vagas         Int         @default(10)
+  ativo         Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  matriculas Matricula[]
+  aulas      Aula[]
+}
+
+model Matricula {
+  id         String    @id @default(cuid())
+  alunoId    String
+  aluno      Aluno     @relation(fields: [alunoId], references: [id])
+  turmaId    String
+  turma      Turma     @relation(fields: [turmaId], references: [id])
+  dataInicio DateTime
+  dataFim    DateTime?
+  ativo      Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  @@unique([alunoId, turmaId])
+}
+
+model Aula {
+  id         String   @id @default(cuid())
+  turmaId    String
+  turma      Turma    @relation(fields: [turmaId], references: [id])
+  data       DateTime
+  realizada  Boolean  @default(false)
+  observacao String?
+  createdAt  DateTime @default(now())
+}
+
+model Pagamento {
+  id         String    @id @default(cuid())
+  alunoId    String
+  aluno      Aluno     @relation(fields: [alunoId], references: [id])
+  valor      Decimal   @db.Decimal(10, 2)
+  vencimento DateTime
+  pago       Boolean   @default(false)
+  dataPagto  DateTime?
+  mes        Int
+  ano        Int
+  observacao String?
+  createdAt  DateTime  @default(now())
+
+  @@unique([alunoId, mes, ano])
+}
