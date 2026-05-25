@@ -1,12 +1,9 @@
-import type { NextConfig } from "next"
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  serverExternalPackages: ["@prisma/client", "bcryptjs"], // se ainda tiver bcryptjs, mas remova
   experimental: {
-    // Necessário para server actions com next-auth v5
-    serverActions: {
-      allowedOrigins: ["localhost:3000"],
-    },
+    serverComponentsExternalPackages: ["@prisma/client"],
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;  
