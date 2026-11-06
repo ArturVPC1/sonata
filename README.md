@@ -1,106 +1,87 @@
-# ERP Escola de Música
+# SONATA — Gestão para escolas de música
 
-Sistema de gerenciamento para escolas de música construído com Next.js 15, Auth.js v5, Prisma e PostgreSQL.
+Aplicação web (TCC) para administrar alunos, professores, turmas e agenda de uma escola de música. Possui áreas por perfil: **Administrador/Secretaria** (funcionário), **Professor** e **Aluno**, todas no mesmo login.
 
 ## Stack
 
-- **Frontend**: Next.js 15, Tailwind CSS, shadcn/ui
-- **Backend**: Next.js API Routes + Server Actions
-- **ORM**: Prisma
-- **Banco**: PostgreSQL (Neon em produção)
-- **Auth**: Auth.js v5 (Credentials + JWT)
-- **Validação**: Zod
-- **Deploy**: Vercel + Neon
+- Next.js 16 (App Router, `src/proxy.ts` no lugar do antigo middleware) e React 19
+- Tailwind CSS 3 + componentes no estilo shadcn/ui
+- Server Actions para as operações de escrita e Route Handlers (previstos para o app mobile)
+- Prisma 6 + PostgreSQL (Neon em produção)
+- Auth.js v5 (Credentials + JWT), senhas com bcrypt
+- Zod para validação
+- Deploy: Vercel + Neon
+
+## Perfis e permissões
+
+| Área | Admin / Secretaria | Professor | Aluno |
+|---|---|---|---|
+| Dashboard | Visão geral da escola | Suas turmas e aulas de hoje | Suas turmas e aulas de hoje |
+| Alunos | Listar, cadastrar, editar, inativar, matricular | Somente os alunos das suas turmas (leitura) | — |
+| Professores | Listar, cadastrar, editar, inativar | — | — |
+| Turmas | Criar, editar, inativar | Suas turmas | Turmas em que está matriculado |
+| Agenda | Agendar, gerar semana, marcar realizada, excluir | Suas aulas; marca como realizada | Suas aulas (leitura) |
+
+O `role` fica no JWT; o `src/auth.ts` (callback `authorized`) bloqueia rotas por perfil e cada página/Server Action confere o perfil de novo (`requireUser` / `assertRole`). Usuários inativos não conseguem entrar.
+
+Regras de negócio: choque de horário de professor e de sala, sala em manutenção, vagas da turma, matrícula única por aluno/turma, responsável obrigatório para menores de 18 anos, CPF único.
 
 ## Primeiros passos
 
-### 1. Instalar dependências
-
 ```bash
-npm install
+npm install                    # também gera o Prisma Client (postinstall)
+cp .env.example .env           # preencha DATABASE_URL e AUTH_SECRET
+npx prisma migrate deploy      # aplica as migrações (inclui a de perfis/salas)
+npx prisma db seed             # dados de demonstração (idempotente)
+npm run dev                    # http://localhost:3000
 ```
 
-### 2. Configurar variáveis de ambiente
+Para um banco que já tem dados (backup do Neon), rode apenas `npx prisma migrate deploy` e depois o seed: ele não apaga nada, só cria o que falta.
 
-```bash
-cp .env.example .env
-```
+### Data de referência da demonstração
 
-Edite `.env` e preencha:
-- `DATABASE_URL` — string de conexão do Neon ou PostgreSQL local
-- `AUTH_SECRET` — gere com `openssl rand -base64 32`
+O seed gera aulas de 21 dias antes a 14 dias depois de uma data de referência (padrão **30/11/2026**, dia da apresentação), com 4 aulas nessa segunda-feira. Para outra data: `SEED_DATE=2026-12-07 npx prisma db seed`.
 
-### 3. Gerar o banco e o cliente Prisma
+### Contas de demonstração (senha `123456`)
 
-```bash
-npm run db:push      # aplica o schema (dev/staging)
-# ou
-npm run db:migrate   # cria uma migration versionada
-```
+| Perfil | E-mail |
+|---|---|
+| Administrador | admin@exemplo.com |
+| Secretaria | secretaria@exemplo.com |
+| Professor | mariana.costa@exemplo.com, rafael.mendes@exemplo.com, camila.oliveira@exemplo.com |
+| Aluno | lucas.ferreira@exemplo.com, beatriz.santos@exemplo.com, pedro.almeida@exemplo.com |
 
-```bash
-npm run db:generate  # gera o Prisma Client
-```
+Com `NEXT_PUBLIC_DEMO_LOGINS="true"` a tela de login mostra botões que preenchem essas credenciais. **Troque as senhas antes de qualquer uso real.**
 
-### 4. Rodar em desenvolvimento
-
-```bash
-npm run dev
-```
-
-Acesse [http://localhost:3000](http://localhost:3000).
-
-## Estrutura do projeto
+## Estrutura
 
 ```
 src/
-├── auth.ts                          # Config do Auth.js (Credentials + callbacks)
-├── middleware.ts                    # Proteção de rotas via Auth.js
-├── types/
-│   └── next-auth.d.ts               # Augmentação de tipos da sessão
+├── auth.ts                  # Auth.js: Credentials, JWT com role, rotas por perfil
+├── proxy.ts                 # Proteção de rotas (Next 16)
 ├── app/
-│   ├── (auth)/login/                # Rota pública — sem sidebar
-│   ├── (dashboard)/                 # Rotas privadas — com sidebar
-│   │   ├── layout.tsx               # Layout com sidebar + verificação de sessão
-│   │   └── dashboard/page.tsx
-│   ├── api/auth/[...nextauth]/      # Handlers do Auth.js
-│   ├── layout.tsx                   # Root layout (SessionProvider)
-│   └── globals.css
-├── components/
-│   ├── sidebar.tsx
-│   └── ui/                          # Componentes shadcn/ui
+│   ├── (auth)/login/        # Login único
+│   └── (dashboard)/         # Área autenticada
+│       ├── dashboard/       # Dashboard por perfil
+│       ├── alunos/          # Lista, cadastro/edição, matrículas
+│       ├── professores/     # Lista, cadastro/edição
+│       ├── turmas/          # Lista, cadastro/edição, alunos da turma
+│       └── agenda/          # Agenda diária/semanal, salas ocupadas/livres
+├── components/              # Sidebar, cabeçalho de página, formulários, ui/
 └── lib/
-    ├── prisma.ts
-    ├── utils.ts
-    └── validations/
-        ├── auth.ts
-        └── aluno.ts
+    ├── password.ts          # bcrypt (aceita SHA-256 legado e migra no 1º login)
+    ├── session.ts           # requireUser / assertRole
+    ├── dates.ts             # Datas em America/Sao_Paulo
+    ├── matricula.ts         # Regras de matrícula
+    └── validations/         # Schemas Zod
 prisma/
-└── schema.prisma                    # Modelos: Usuario, Aluno, Professor,
-                                     # Instrumento, Turma, Matricula, Aula, Pagamento
+├── schema.prisma            # Usuario, Aluno, Professor, Instrumento, Sala, Turma, Matricula, Aula, Pagamento
+├── migrations/              # Histórico versionado
+└── seed.ts                  # Dados de demonstração
 ```
 
-## Criando o primeiro usuário admin
+## Observações
 
-Por enquanto não há tela de cadastro de admin. Crie via Prisma Studio:
-
-```bash
-npm run db:studio
-```
-
-Ou via script Node (lembre de fazer hash da senha com bcrypt):
-
-```js
-const { PrismaClient } = require("@prisma/client")
-const bcrypt = require("bcryptjs")
-const prisma = new PrismaClient()
-
-async function main() {
-  const hash = await bcrypt.hash("suasenha", 12)
-  await prisma.usuario.create({
-    data: { nome: "Admin", email: "admin@escola.com", senhaHash: hash, role: "ADMIN" }
-  })
-}
-
-main()
-```
+- O módulo **Pagamentos** existe no schema, mas a tela foi adiada e o link está oculto.
+- Datas de aula são gravadas como horário de parede de São Paulo (sem fuso); os helpers em `lib/dates.ts` cuidam disso.
+- Nunca versione o `.env`. Se uma credencial vazar, troque a senha do banco e o `AUTH_SECRET`.

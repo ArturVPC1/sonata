@@ -10,12 +10,17 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-slot": "^1.1.0",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.454.0",
