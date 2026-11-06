@@ -10,7 +10,6 @@ import {
   GraduationCap,
   Music2,
   CalendarDays,
-  CreditCard,
   LogOut,
   Music,
 } from "lucide-react"
@@ -24,14 +23,22 @@ interface SidebarProps {
   }
 }
 
-const navLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/alunos", label: "Alunos", icon: Users },
-  { href: "/professores", label: "Professores", icon: GraduationCap },
-  { href: "/turmas", label: "Turmas", icon: Music2 },
-  { href: "/agenda", label: "Agenda", icon: CalendarDays },
-  { href: "/pagamentos", label: "Pagamentos", icon: CreditCard },
+type Role = "ADMIN" | "SECRETARIA" | "PROFESSOR" | "ALUNO"
+const ALL: Role[] = ["ADMIN", "SECRETARIA", "PROFESSOR", "ALUNO"]
+const navLinks: { href: string; label: string; icon: typeof Users; roles: Role[] }[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ALL },
+  { href: "/alunos", label: "Alunos", icon: Users, roles: ["ADMIN", "SECRETARIA", "PROFESSOR"] },
+  { href: "/professores", label: "Professores", icon: GraduationCap, roles: ["ADMIN", "SECRETARIA"] },
+  { href: "/turmas", label: "Turmas", icon: Music2, roles: ALL },
+  { href: "/agenda", label: "Agenda", icon: CalendarDays, roles: ALL },
+  // Pagamentos: módulo adiado (fora do escopo desta entrega)
 ]
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: "Administrador",
+  SECRETARIA: "Secretaria",
+  PROFESSOR: "Professor",
+  ALUNO: "Aluno",
+}
 
 export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
@@ -52,13 +59,13 @@ export function Sidebar({ user }: SidebarProps) {
 
       {/* Navegação */}
       <nav className="flex-1 p-4 space-y-1">
-        {navLinks.map(({ href, label, icon: Icon }) => (
+        {navLinks.filter((l) => !user.role || l.roles.includes(user.role as Role)).map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              pathname === href
+              pathname === href || (href !== "/dashboard" && pathname.startsWith(href + "/"))
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
@@ -76,7 +83,7 @@ export function Sidebar({ user }: SidebarProps) {
           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
           {user.role && (
             <span className="inline-block mt-1 text-[10px] font-medium uppercase tracking-wide bg-muted px-1.5 py-0.5 rounded">
-              {user.role}
+              {ROLE_LABEL[user.role] ?? user.role}
             </span>
           )}
         </div>

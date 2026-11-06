@@ -1,12 +1,2 @@
-// lib/crypto.ts
-export async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Buffer.from(hash).toString('hex');
-}
-
-export async function verifyPassword(password: string, hashed: string): Promise<boolean> {
-  const hash = await hashPassword(password);
-  return hash === hashed;
-}
+// Mantido por compatibilidade: a lógica de senha agora vive em ./password (bcrypt).
+export { hashPassword, verifyPassword } from "./password"

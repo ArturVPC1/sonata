@@ -1,17 +1,42 @@
 import { z } from "zod"
+import { ageFrom } from "@/lib/dates"
 
-export const createAlunoSchema = z.object({
-  nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
-  email: z.string().email("Email inválido"),
-  telefone: z.string().optional(),
-  dataNasc: z.coerce.date().optional(),
-  cpf: z
-    .string()
-    .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido (formato: 000.000.000-00)")
-    .optional(),
-})
+const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
-export type CreateAlunoInput = z.infer<typeof createAlunoSchema>
+/** CPF: aceita com ou sem máscara e grava só os 11 dígitos. */
+const cpf = z
+  .string()
+  .transform(onlyDigits)
+  .refine((v) => v.length === 11, "CPF inválido (11 dígitos)")
 
-export const updateAlunoSchema = createAlunoSchema.partial()
-export type UpdateAlunoInput = z.infer<typeof updateAlunoSchema>
+const dataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")
+
+export const alunoFormSchema = z
+  .object({
+    nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
+    email: z.string().email("E-mail inválido").transform((v) => v.toLowerCase()),
+    telefone: z.string().optional(),
+    dataNasc: dataISO.optional(),
+    cpf: cpf.optional(),
+    responsavelNome: z.string().optional(),
+    responsavelTelefone: z.string().optional(),
+    observacoes: z.string().max(500, "Máximo de 500 caracteres").optional(),
+    senha: z.string().min(6, "A senha deve ter ao menos 6 caracteres").optional(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.dataNasc) {
+      const d = new Date(`${v.dataNasc}T00:00:00.000Z`)
+      if (d > new Date()) ctx.addIssue({ code: "custom", path: ["dataNasc"], message: "A data não pode ser futura" })
+      else if (ageFrom(d) < 18 && !v.responsavelNome?.trim()) {
+        ctx.addIssue({ code: "custom", path: ["responsavelNome"], message: "Informe o responsável (aluno menor de 18 anos)" })
+      }
+    }
+  })
+
+export type AlunoFormInput = z.infer<typeof alunoFormSchema>
+
+// Compatibilidade com o código anterior
+export const createAlunoSchema = alunoFormSchema
+export type CreateAlunoInput = AlunoFormInput
+export const updateAlunoSchema = alunoFormSchema
+export type UpdateAlunoInput = AlunoFormInput
