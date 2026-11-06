@@ -22,6 +22,13 @@ export default function LoginPage() {
   const [erro, setErro] = useState("")
   const [carregando, setCarregando] = useState(false)
 
+  const demos = process.env.NEXT_PUBLIC_DEMO_LOGINS === "true"
+  const DEMO_ACCOUNTS = [
+    { label: "Funcionário", email: "secretaria@exemplo.com" },
+    { label: "Professor", email: "mariana.costa@exemplo.com" },
+    { label: "Aluno", email: "lucas.ferreira@exemplo.com" },
+  ]
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro("")
@@ -110,6 +117,28 @@ export default function LoginPage() {
                 {carregando ? "Entrando…" : "Entrar"}
               </Button>
             </form>
+
+            {demos && (
+              <div className="mt-6 border-t pt-4 space-y-2">
+                <p className="text-xs text-muted-foreground">Contas de demonstração (senha 123456)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {DEMO_ACCOUNTS.map((d) => (
+                    <Button
+                      key={d.email}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEmail(d.email)
+                        setSenha("123456")
+                      }}
+                    >
+                      {d.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

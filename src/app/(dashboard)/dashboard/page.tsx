@@ -1,89 +1,140 @@
-import { auth } from "@/auth"
+import Link from "next/link"
+import { Users, Music2, GraduationCap, CalendarDays, DoorOpen } from "lucide-react"
 import { prisma } from "@/lib/prisma"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Users, Music2, GraduationCap, CalendarDays } from "lucide-react"
+import { requireUser, isStaff, ROLE_LABEL } from "@/lib/session"
+import { todayStr, dayRange, diaSemanaOf, fmtTime, fmtLongDate, DIA_LABEL } from "@/lib/dates"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { PageHeader } from "@/components/page-header"
 
-async function getResumo() {
-  const [totalAlunos, totalProfessores, turmasAtivas, aulasHoje] =
-    await Promise.all([
-      prisma.aluno.count({ where: { ativo: true } }),
-      prisma.professor.count(),
-      prisma.turma.count({ where: { ativo: true } }),
-      prisma.aula.count({
-        where: {
-          data: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-            lte: new Date(new Date().setHours(23, 59, 59, 999)),
-          },
-        },
-      }),
-    ])
-
-  return { totalAlunos, totalProfessores, turmasAtivas, aulasHoje }
+function Kpi({ titulo, valor, desc, icon: Icon }: { titulo: string; valor: number; desc: string; icon: typeof Users }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{titulo}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold">{valor}</div>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default async function DashboardPage() {
-  const session = await auth()
-  const resumo = await getResumo()
+  const user = await requireUser()
+  const hoje = todayStr()
 
-  const cards = [
-    {
-      titulo: "Alunos ativos",
-      valor: resumo.totalAlunos,
-      descricao: "matriculados",
-      icon: Users,
-    },
-    {
-      titulo: "Professores",
-      valor: resumo.totalProfessores,
-      descricao: "cadastrados",
-      icon: GraduationCap,
-    },
-    {
-      titulo: "Turmas ativas",
-      valor: resumo.turmasAtivas,
-      descricao: "em andamento",
-      icon: Music2,
-    },
-    {
-      titulo: "Aulas hoje",
-      valor: resumo.aulasHoje,
-      descricao: "agendadas",
-      icon: CalendarDays,
-    },
-  ]
+  // Escopo conforme o perfil
+  let turmaWhere: object = { ativo: true }
+  let nomeAluno: string | undefined
+  if (user.role === "PROFESSOR") {
+    const prof = await prisma.professor.findUnique({ where: { usuarioId: user.id } })
+    turmaWhere = { ativo: true, professorId: prof?.id ?? "__none__" }
+  } else if (user.role === "ALUNO") {
+    const al = await prisma.aluno.findUnique({ where: { usuarioId: user.id } })
+    nomeAluno = al?.nome
+    turmaWhere = { ativo: true, matriculas: { some: { alunoId: al?.id ?? "__none__", ativo: true } } }
+  }
+
+  const aulasHoje = await prisma.aula.findMany({
+    where: { data: dayRange(hoje), turma: turmaWhere },
+    include: { turma: { include: { instrumento: true, professor: { include: { usuario: true } }, sala: true } } },
+    orderBy: { data: "asc" },
+  })
+  const minhasTurmas = await prisma.turma.findMany({
+    where: turmaWhere,
+    include: { instrumento: true, sala: true, professor: { include: { usuario: true } }, _count: { select: { matriculas: { where: { ativo: true } } } } },
+    orderBy: { nome: "asc" },
+  })
+
+  let kpis: React.ReactNode = null
+  if (isStaff(user.role)) {
+    const [alunos, professores, turmas, salas, ocupadas] = await Promise.all([
+      prisma.aluno.count({ where: { ativo: true } }),
+      prisma.professor.count({ where: { usuario: { ativo: true } } }),
+      prisma.turma.count({ where: { ativo: true } }),
+      prisma.sala.count({ where: { status: "DISPONIVEL" } }),
+      prisma.aula.findMany({ where: { data: dayRange(hoje) }, select: { turma: { select: { salaId: true } } } }),
+    ])
+    const salasOcupadas = new Set(ocupadas.map((a) => a.turma.salaId).filter(Boolean)).size
+    kpis = (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Kpi titulo="Alunos ativos" valor={alunos} desc="cadastrados" icon={Users} />
+        <Kpi titulo="Professores" valor={professores} desc="com acesso ativo" icon={GraduationCap} />
+        <Kpi titulo="Turmas ativas" valor={turmas} desc="em andamento" icon={Music2} />
+        <Kpi titulo="Aulas hoje" valor={aulasHoje.length} desc="agendadas" icon={CalendarDays} />
+        <Kpi titulo="Salas livres hoje" valor={Math.max(salas - salasOcupadas, 0)} desc={`de ${salas} disponíveis`} icon={DoorOpen} />
+      </div>
+    )
+  } else {
+    kpis = (
+      <div className="grid gap-4 sm:grid-cols-2 max-w-xl">
+        <Kpi titulo="Aulas hoje" valor={aulasHoje.length} desc="agendadas" icon={CalendarDays} />
+        <Kpi titulo={user.role === "PROFESSOR" ? "Minhas turmas" : "Minhas turmas (matriculado)"} valor={minhasTurmas.length} desc="ativas" icon={Music2} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Bem-vindo, {session?.user?.name?.split(" ")[0]}!
-        </p>
-      </div>
+      <PageHeader
+        title={`Olá, ${(nomeAluno ?? user.name ?? "").split(" ")[0]}`}
+        description={`${ROLE_LABEL[user.role]} · ${fmtLongDate(hoje)}`}
+      />
+      {kpis}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {cards.map((card) => (
-          <Card key={card.titulo}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.titulo}
-              </CardTitle>
-              <card.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{card.valor}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {card.descricao}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Aulas de hoje</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {aulasHoje.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma aula hoje.</p>}
+            {aulasHoje.map((a) => (
+              <div key={a.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">
+                    <span className="tabular-nums">{fmtTime(a.data)}</span> · {a.turma.nome}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {a.turma.sala?.nome ?? "Sem sala"} · Prof. {a.turma.professor.usuario.nome}
+                  </p>
+                </div>
+                <Badge variant={a.realizada ? "secondary" : "outline"}>{a.realizada ? "Realizada" : "Agendada"}</Badge>
+              </div>
+            ))}
+            <Link href="/agenda" className="text-sm text-primary hover:underline inline-block pt-1">
+              Abrir agenda →
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{isStaff(user.role) ? "Turmas ativas" : "Minhas turmas"}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {minhasTurmas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma turma.</p>}
+            {minhasTurmas.slice(0, 6).map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{t.nome}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {DIA_LABEL[t.diaSemana]} {t.horario} · {t.sala?.nome ?? "Sem sala"}
+                  </p>
+                </div>
+                <Badge variant="outline">
+                  {t._count.matriculas}/{t.vagas}
+                </Badge>
+              </div>
+            ))}
+            <Link href="/turmas" className="text-sm text-primary hover:underline inline-block pt-1">
+              Ver todas →
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

@@ -11,6 +11,12 @@ enum UserRole {
   ADMIN
   SECRETARIA
   PROFESSOR
+  ALUNO
+}
+
+enum SalaStatus {
+  DISPONIVEL
+  MANUTENCAO
 }
 
 enum DiaSemana {
@@ -34,6 +40,7 @@ model Usuario {
   updatedAt DateTime @updatedAt
 
   professor Professor?
+  aluno     Aluno?
 }
 
 model Aluno {
@@ -47,6 +54,15 @@ model Aluno {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
+  // Acesso do aluno ao sistema (opcional)
+  usuarioId String?  @unique
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  // Responsável (obrigatório na regra de negócio para menores de 18 anos)
+  responsavelNome     String?
+  responsavelTelefone String?
+  observacoes         String?
+
   matriculas Matricula[]
   pagamentos Pagamento[]
 }
@@ -55,6 +71,7 @@ model Professor {
   id        String   @id @default(cuid())
   usuarioId String   @unique
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  telefone  String?
   bio       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,6 +87,16 @@ model Instrumento {
   turmas Turma[]
 }
 
+model Sala {
+  id            String     @id @default(cuid())
+  nome          String     @unique
+  capacidade    Int        @default(4)
+  status        SalaStatus @default(DISPONIVEL)
+  manutencaoAte DateTime?
+
+  turmas Turma[]
+}
+
 model Turma {
   id            String      @id @default(cuid())
   nome          String
@@ -77,6 +104,8 @@ model Turma {
   instrumento   Instrumento @relation(fields: [instrumentoId], references: [id])
   professorId   String
   professor     Professor   @relation(fields: [professorId], references: [id])
+  salaId        String?
+  sala          Sala?       @relation(fields: [salaId], references: [id])
   diaSemana     DiaSemana
   horario       String
   duracaoMin    Int         @default(60)
