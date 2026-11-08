@@ -19,6 +19,28 @@ enum SalaStatus {
   MANUTENCAO
 }
 
+enum TipoReserva {
+  AULA
+  ENSAIO_INDIVIDUAL
+  ENSAIO_COLETIVO
+}
+
+enum StatusReserva {
+  ATIVA
+  CANCELADA
+}
+
+enum TipoSolicitacao {
+  EXTRA
+  REPOSICAO
+}
+
+enum StatusSolicitacao {
+  PENDENTE
+  APROVADA
+  REJEITADA
+}
+
 enum DiaSemana {
   DOMINGO
   SEGUNDA
@@ -41,6 +63,9 @@ model Usuario {
 
   professor Professor?
   aluno     Aluno?
+
+  reservas     Reserva[]
+  notificacoes Notificacao[]
 }
 
 model Aluno {
@@ -63,8 +88,9 @@ model Aluno {
   responsavelTelefone String?
   observacoes         String?
 
-  matriculas Matricula[]
-  pagamentos Pagamento[]
+  matriculas   Matricula[]
+  pagamentos   Pagamento[]
+  solicitacoes SolicitacaoAula[]
 }
 
 model Professor {
@@ -73,10 +99,15 @@ model Professor {
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
   telefone  String?
   bio       String?
+  cpf                 String? @unique
+  endereco            String?
+  registroProfissional String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  turmas Turma[]
+  turmas       Turma[]
+  reservas     Reserva[]
+  solicitacoes SolicitacaoAula[]
 }
 
 model Instrumento {
@@ -93,8 +124,10 @@ model Sala {
   capacidade    Int        @default(4)
   status        SalaStatus @default(DISPONIVEL)
   manutencaoAte DateTime?
+  recursos      String?
 
-  turmas Turma[]
+  turmas   Turma[]
+  reservas Reserva[]
 }
 
 model Turma {
@@ -140,6 +173,8 @@ model Aula {
   realizada  Boolean  @default(false)
   observacao String?
   createdAt  DateTime @default(now())
+
+  solicitacoes SolicitacaoAula[]
 }
 
 model Pagamento {
@@ -156,4 +191,53 @@ model Pagamento {
   createdAt  DateTime  @default(now())
 
   @@unique([alunoId, mes, ano])
+}
+
+model Reserva {
+  id          String        @id @default(cuid())
+  salaId      String
+  sala        Sala          @relation(fields: [salaId], references: [id])
+  criadoPorId String
+  criadoPor   Usuario       @relation(fields: [criadoPorId], references: [id])
+  professorId String?
+  professor   Professor?    @relation(fields: [professorId], references: [id])
+  tipo        TipoReserva
+  observacao  String?
+  data        DateTime
+  duracaoMin  Int           @default(60)
+  status      StatusReserva @default(ATIVA)
+  createdAt   DateTime      @default(now())
+
+  solicitacao SolicitacaoAula?
+}
+
+model SolicitacaoAula {
+  id            String            @id @default(cuid())
+  alunoId       String
+  aluno         Aluno             @relation(fields: [alunoId], references: [id])
+  professorId   String
+  professor     Professor         @relation(fields: [professorId], references: [id])
+  tipo          TipoSolicitacao
+  data          DateTime
+  duracaoMin    Int               @default(60)
+  motivo        String
+  aulaPerdidaId String?
+  aulaPerdida   Aula?             @relation(fields: [aulaPerdidaId], references: [id])
+  status        StatusSolicitacao @default(PENDENTE)
+  decididoPorId String?
+  decididoEm    DateTime?
+  justificativa String?
+  reservaId     String?           @unique
+  reserva       Reserva?          @relation(fields: [reservaId], references: [id])
+  createdAt     DateTime          @default(now())
+}
+
+model Notificacao {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensagem  String
+  link      String?
+  lida      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

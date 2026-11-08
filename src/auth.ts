@@ -17,6 +17,9 @@ const loginSchema = z.object({
 const ROTAS: { prefixo: string; perfis: UserRole[] }[] = [
   { prefixo: "/professores", perfis: ["ADMIN", "SECRETARIA"] },
   { prefixo: "/alunos", perfis: ["ADMIN", "SECRETARIA", "PROFESSOR"] },
+  { prefixo: "/salas", perfis: ["ADMIN", "SECRETARIA"] },
+  { prefixo: "/instrumentos", perfis: ["ADMIN", "SECRETARIA"] },
+  { prefixo: "/reservas", perfis: ["ADMIN", "SECRETARIA", "PROFESSOR"] },
 ]
 
 export const { handlers, auth, signIn, signOut } = NextAuth({

@@ -4,7 +4,7 @@ import { ageFrom } from "@/lib/dates"
 const onlyDigits = (s: string) => s.replace(/\D/g, "")
 
 /** CPF: aceita com ou sem máscara e grava só os 11 dígitos. */
-const cpf = z
+export const cpfSchema = z
   .string()
   .transform(onlyDigits)
   .refine((v) => v.length === 11, "CPF inválido (11 dígitos)")
@@ -17,7 +17,7 @@ export const alunoFormSchema = z
     email: z.string().email("E-mail inválido").transform((v) => v.toLowerCase()),
     telefone: z.string().optional(),
     dataNasc: dataISO.optional(),
-    cpf: cpf.optional(),
+    cpf: cpfSchema.optional(),
     responsavelNome: z.string().optional(),
     responsavelTelefone: z.string().optional(),
     observacoes: z.string().max(500, "Máximo de 500 caracteres").optional(),
@@ -27,8 +27,9 @@ export const alunoFormSchema = z
     if (v.dataNasc) {
       const d = new Date(`${v.dataNasc}T00:00:00.000Z`)
       if (d > new Date()) ctx.addIssue({ code: "custom", path: ["dataNasc"], message: "A data não pode ser futura" })
-      else if (ageFrom(d) < 18 && !v.responsavelNome?.trim()) {
-        ctx.addIssue({ code: "custom", path: ["responsavelNome"], message: "Informe o responsável (aluno menor de 18 anos)" })
+      else if (ageFrom(d) < 18) {
+        if (!v.responsavelNome?.trim()) ctx.addIssue({ code: "custom", path: ["responsavelNome"], message: "Informe o responsável (aluno menor de 18 anos)" })
+        if (!v.responsavelTelefone?.trim()) ctx.addIssue({ code: "custom", path: ["responsavelTelefone"], message: "Informe o telefone do responsável (aluno menor de 18 anos)" })
       }
     }
   })

@@ -85,3 +85,17 @@ prisma/
 - O módulo **Pagamentos** existe no schema, mas a tela foi adiada e o link está oculto.
 - Datas de aula são gravadas como horário de parede de São Paulo (sem fuso); os helpers em `lib/dates.ts` cuidam disso.
 - Nunca versione o `.env`. Se uma credencial vazar, troque a senha do banco e o `AUTH_SECRET`.
+
+## Módulos (atualização de novembro/2026)
+
+- **Salas** (`/salas`) e **Instrumentos** (`/instrumentos`): cadastro, edição, exclusão com bloqueio por vínculos ativos e manutenção de sala com data de término.
+- **Reservas** (`/reservas`): ensaio individual/coletivo ou aula, com verificação de conflito (turmas e outras reservas), cancelamento e reagendamento.
+- **Solicitações de aula** (`/solicitacoes`): o aluno pede aula extra ou reposição (limite de 3 pendentes, sugestão de horários); professor ou administração aprova (gera a reserva) ou rejeita com justificativa. Avisos aparecem em **Notificações** dentro do sistema.
+- **Agenda**: visão por dia e por semana, com aulas, reservas e ocupação das salas.
+- **Turmas**: matrícula e desmatrícula direto na tela da turma, com data de início.
+- **Professores**: CPF, endereço e registro profissional; exclusão com bloqueio por vínculos.
+- Menu responsivo para celular.
+
+### Banco de dados
+
+Depois de atualizar o código, rode no Neon (SQL Editor) o arquivo `prisma/migrations/20261108120000_reservas_solicitacoes_professor/migration.sql` e, para os dados de demonstração, `npx prisma db seed` (ou o SQL de seed enviado junto). O `npm run build` não altera o banco.

@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
+import { Flash } from "@/components/flash"
 
-export default async function AlunosPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+export default async function AlunosPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; ok?: string }> }) {
   const user = await requireUser(["ADMIN", "SECRETARIA", "PROFESSOR"])
-  const { q = "", status = "ativo" } = await searchParams
+  const { q = "", status = "ativo", ok } = await searchParams
   const staff = isStaff(user.role)
 
   const where: Prisma.AlunoWhereInput = {}
@@ -36,6 +37,7 @@ export default async function AlunosPage({ searchParams }: { searchParams: Promi
         description={user.role === "PROFESSOR" ? "Alunos matriculados nas suas turmas." : `${alunos.length} aluno(s) encontrado(s).`}
         action={staff ? { href: "/alunos/novo", label: "Novo aluno" } : undefined}
       />
+      <Flash msg={ok} />
       <form className="flex flex-wrap gap-2" role="search">
         <Input name="q" defaultValue={q} placeholder="Buscar por nome ou e-mail" className="max-w-xs" />
         <Select name="status" defaultValue={status} className="w-40">

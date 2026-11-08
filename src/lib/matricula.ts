@@ -22,12 +22,12 @@ export async function matricular(alunoId: string, turmaId: string, dataInicio: D
   const jaAtiva = aluno.matriculas.some((m) => m.turmaId === turmaId)
   if (jaAtiva) throw new Error("O aluno já está matriculado nesta turma.")
 
-  if (turma._count.matriculas >= turma.vagas) throw new Error("A turma não tem vagas disponíveis.")
+  if (turma._count.matriculas >= turma.vagas) throw new Error("Não há vagas disponíveis nesta turma.")
 
   const choque = aluno.matriculas.find(
     (m) => m.turma.diaSemana === turma.diaSemana && overlaps(m.turma.horario, m.turma.duracaoMin, turma.horario, turma.duracaoMin)
   )
-  if (choque) throw new Error(`Choque de horário com a turma "${choque.turma.nome}".`)
+  if (choque) throw new Error("Conflito de horário: o aluno já está matriculado em outra turma neste horário.")
 
   // Matrícula encerrada antes? Reativa em vez de criar outra (há índice único aluno+turma).
   return prisma.matricula.upsert({

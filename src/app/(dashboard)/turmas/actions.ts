@@ -1,12 +1,13 @@
 "use server"
 
-import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { assertRole, STAFF } from "@/lib/session"
 import { turmaFormSchema } from "@/lib/validations/turma"
 import { actionError, formToObject, zodFieldErrors, type FormState } from "@/lib/form-state"
 import { overlaps } from "@/lib/dates"
+import { MSG_CONFLITO_PROF_OU_SALA } from "@/lib/conflitos"
+import { redirectOk } from "@/lib/flash"
 
 export async function salvarTurma(id: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
   try {
@@ -22,14 +23,13 @@ export async function salvarTurma(id: string | null, _prev: FormState, fd: FormD
     })
     for (const o of mesmas) {
       if (!overlaps(o.horario, o.duracaoMin, v.horario, v.duracaoMin)) continue
-      if (o.professorId === v.professorId) return { error: `O professor já tem a turma "${o.nome}" neste horário (${o.horario}).` }
-      if (salaId && o.salaId === salaId) return { error: `A sala já está ocupada pela turma "${o.nome}" neste horário (${o.horario}).` }
+      if (o.professorId === v.professorId || (salaId && o.salaId === salaId)) return { error: MSG_CONFLITO_PROF_OU_SALA }
     }
 
     if (salaId) {
       const sala = await prisma.sala.findUnique({ where: { id: salaId } })
       if (!sala) return { error: "Sala não encontrada." }
-      if (sala.status === "MANUTENCAO") return { error: `A sala "${sala.nome}" está em manutenção.`, fieldErrors: { salaId: "Sala em manutenção" } }
+      if (sala.status === "MANUTENCAO") return { error: MSG_CONFLITO_PROF_OU_SALA, fieldErrors: { salaId: "Sala em manutenção" } }
     }
 
     const prof = await prisma.professor.findUnique({ where: { id: v.professorId }, include: { usuario: true } })
@@ -46,7 +46,7 @@ export async function salvarTurma(id: string | null, _prev: FormState, fd: FormD
     return actionError(e)
   }
   revalidatePath("/turmas")
-  redirect("/turmas")
+  redirectOk("/turmas", id ? "Dados da turma atualizados com sucesso." : "Turma cadastrada com sucesso.")
 }
 
 export async function alternarTurma(id: string): Promise<FormState> {

@@ -33,9 +33,9 @@ async function main() {
 
   // ---------- Professores (usuário + professor) ----------
   const professores = [
-    { id: "seed_prof_001", usuarioId: "seed_usr_prof_001", nome: "Mariana Costa", email: "mariana.costa@exemplo.com", telefone: "(11) 98100-0001", bio: "Professora de piano e teoria musical. Atua com alunos iniciantes e intermediários." },
-    { id: "seed_prof_002", usuarioId: "seed_usr_prof_002", nome: "Rafael Mendes", email: "rafael.mendes@exemplo.com", telefone: "(11) 98100-0002", bio: "Professor de violão e guitarra, com foco em prática e repertório." },
-    { id: "seed_prof_003", usuarioId: "seed_usr_prof_003", nome: "Camila Oliveira", email: "camila.oliveira@exemplo.com", telefone: "(11) 98100-0003", bio: "Professora de canto e técnica vocal." },
+    { id: "seed_prof_001", usuarioId: "seed_usr_prof_001", nome: "Mariana Costa", email: "mariana.costa@exemplo.com", telefone: "(11) 98100-0001", cpf: "52998224725", endereco: "Rua das Acácias, 120 - São Paulo/SP", registro: "OMB-SP 10231", bio: "Professora de piano e teoria musical. Atua com alunos iniciantes e intermediários." },
+    { id: "seed_prof_002", usuarioId: "seed_usr_prof_002", nome: "Rafael Mendes", email: "rafael.mendes@exemplo.com", telefone: "(11) 98100-0002", cpf: "11144477735", endereco: "Av. Brasil, 455 - São Paulo/SP", registro: "OMB-SP 10232", bio: "Professor de violão e guitarra, com foco em prática e repertório." },
+    { id: "seed_prof_003", usuarioId: "seed_usr_prof_003", nome: "Camila Oliveira", email: "camila.oliveira@exemplo.com", telefone: "(11) 98100-0003", cpf: "39053344705", endereco: "Rua do Conservatório, 78 - São Paulo/SP", registro: null as string | null, bio: "Professora de canto e técnica vocal." },
   ]
   for (const p of professores) {
     await prisma.usuario.upsert({
@@ -45,8 +45,8 @@ async function main() {
     })
     await prisma.professor.upsert({
       where: { id: p.id },
-      update: { telefone: p.telefone },
-      create: { id: p.id, usuarioId: p.usuarioId, telefone: p.telefone, bio: p.bio },
+      update: { telefone: p.telefone, cpf: p.cpf, endereco: p.endereco, registroProfissional: p.registro },
+      create: { id: p.id, usuarioId: p.usuarioId, telefone: p.telefone, bio: p.bio, cpf: p.cpf, endereco: p.endereco, registroProfissional: p.registro },
     })
   }
 
@@ -64,15 +64,15 @@ async function main() {
 
   // ---------- Salas ----------
   const salas = [
-    { id: "seed_sala_1", nome: "Sala 1", capacidade: 4, status: "DISPONIVEL" as const },
-    { id: "seed_sala_2", nome: "Sala 2", capacidade: 4, status: "DISPONIVEL" as const },
-    { id: "seed_sala_3", nome: "Sala 3", capacidade: 3, status: "DISPONIVEL" as const },
-    { id: "seed_sala_4", nome: "Sala 4", capacidade: 6, status: "MANUTENCAO" as const, manutencaoAte: toDbDateTime(addDays(REF, 7), "00:00") },
-    { id: "seed_sala_5", nome: "Sala 5", capacidade: 4, status: "DISPONIVEL" as const },
-    { id: "seed_sala_6", nome: "Auditório", capacidade: 40, status: "DISPONIVEL" as const },
+    { id: "seed_sala_1", nome: "Sala 1", capacidade: 4, status: "DISPONIVEL" as const, recursos: "Piano de armário, estantes de partitura" },
+    { id: "seed_sala_2", nome: "Sala 2", capacidade: 4, status: "DISPONIVEL" as const, recursos: "Violões, amplificador, estantes" },
+    { id: "seed_sala_3", nome: "Sala 3", capacidade: 3, status: "DISPONIVEL" as const, recursos: "Teclado, espelho, caixa de som" },
+    { id: "seed_sala_4", nome: "Sala 4", capacidade: 6, status: "MANUTENCAO" as const, recursos: "Bateria acústica, isolamento acústico", manutencaoAte: toDbDateTime(addDays(REF, 7), "00:00") },
+    { id: "seed_sala_5", nome: "Sala 5", capacidade: 4, status: "DISPONIVEL" as const, recursos: "Amplificadores, pedais, guitarras" },
+    { id: "seed_sala_6", nome: "Auditório", capacidade: 40, status: "DISPONIVEL" as const, recursos: "Piano de cauda, palco, 40 lugares" },
   ]
   for (const s of salas) {
-    await prisma.sala.upsert({ where: { nome: s.nome }, update: { capacidade: s.capacidade, status: s.status, manutencaoAte: s.manutencaoAte ?? null }, create: s })
+    await prisma.sala.upsert({ where: { nome: s.nome }, update: { capacidade: s.capacidade, status: s.status, recursos: s.recursos, manutencaoAte: s.manutencaoAte ?? null }, create: s })
   }
   const sala = async (nome: string) => (await prisma.sala.findUniqueOrThrow({ where: { nome } })).id
 
@@ -162,6 +162,29 @@ async function main() {
       criadas++
     }
   }
+
+  // ---------- Reservas, solicitações e notificações de exemplo ----------
+  const adminId = (await prisma.usuario.findUniqueOrThrow({ where: { email: "admin@exemplo.com" } })).id
+  const dRes = addDays(REF, 2)
+  const reservas = [
+    { id: "seed_res_001", sala: "Sala 3", tipo: "ENSAIO_INDIVIDUAL" as const, prof: "seed_prof_001", obs: "Ensaio para recital", hora: "10:00", dur: 60, dia: dRes },
+    { id: "seed_res_002", sala: "Auditório", tipo: "ENSAIO_COLETIVO" as const, prof: "seed_prof_003", obs: "Ensaio geral do coral", hora: "18:00", dur: 90, dia: dRes },
+    { id: "seed_res_003", sala: "Sala 2", tipo: "AULA" as const, prof: "seed_prof_002", obs: "Aula avulsa", hora: "15:00", dur: 60, dia: addDays(REF, 1) },
+  ]
+  for (const r of reservas) {
+    const dados = { salaId: await sala(r.sala), criadoPorId: adminId, professorId: r.prof, tipo: r.tipo, observacao: r.obs, data: toDbDateTime(r.dia, r.hora), duracaoMin: r.dur, status: "ATIVA" as const }
+    await prisma.reserva.upsert({ where: { id: r.id }, update: dados, create: { id: r.id, ...dados } })
+  }
+  await prisma.solicitacaoAula.upsert({
+    where: { id: "seed_sol_001" },
+    update: {},
+    create: { id: "seed_sol_001", alunoId: "seed_aluno_003", professorId: "seed_prof_002", tipo: "EXTRA", data: toDbDateTime(addDays(REF, 3), "17:00"), duracaoMin: 60, motivo: "Preparação para apresentação da escola", status: "PENDENTE" },
+  })
+  await prisma.notificacao.upsert({
+    where: { id: "seed_not_001" },
+    update: {},
+    create: { id: "seed_not_001", usuarioId: "seed_usr_prof_002", mensagem: "Nova solicitação de aula extra de Pedro Almeida.", link: "/solicitacoes" },
+  })
 
   console.log(`Seed concluído (referência ${REF}). Aulas verificadas/criadas: ${criadas}.`)
 }

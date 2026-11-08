@@ -5,10 +5,12 @@ import { PageHeader, DataTable, EmptyRow } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ActionButton } from "@/components/form-bits"
-import { alternarProfessor } from "./actions"
+import { alternarProfessor, excluirProfessor } from "./actions"
+import { Flash } from "@/components/flash"
 
-export default async function ProfessoresPage() {
+export default async function ProfessoresPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   await requireUser(STAFF)
+  const { ok } = await searchParams
   const professores = await prisma.professor.findMany({
     orderBy: { usuario: { nome: "asc" } },
     include: { usuario: true, turmas: { where: { ativo: true }, include: { instrumento: true } } },
@@ -16,6 +18,7 @@ export default async function ProfessoresPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Professores" description={`${professores.length} professor(es) cadastrado(s).`} action={{ href: "/professores/novo", label: "Novo professor" }} />
+      <Flash msg={ok} />
       <DataTable head={["Professor", "Telefone", "Instrumentos", "Turmas ativas", "Status", ""]}>
         {professores.length === 0 && <EmptyRow colSpan={6}>Nenhum professor cadastrado.</EmptyRow>}
         {professores.map((p) => {
@@ -45,6 +48,7 @@ export default async function ProfessoresPage() {
                     <Link href={`/professores/editar?id=${p.id}`}>Editar</Link>
                   </Button>
                   <ActionButton action={alternarProfessor.bind(null, p.id)}>{p.usuario.ativo ? "Inativar" : "Reativar"}</ActionButton>
+                  <ActionButton variant="ghost" action={excluirProfessor.bind(null, p.id)} confirmText={`Excluir o professor ${p.usuario.nome}? Esta operação é irreversível.`}>Excluir</ActionButton>
                 </div>
               </td>
             </tr>

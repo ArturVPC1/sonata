@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ActionButton } from "@/components/form-bits"
 import { alternarTurma } from "./actions"
+import { Flash } from "@/components/flash"
 
-export default async function TurmasPage() {
+export default async function TurmasPage({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   const user = await requireUser()
+  const { ok } = await searchParams
   const staff = isStaff(user.role)
   const where: Prisma.TurmaWhereInput = {}
   if (user.role === "PROFESSOR") {
@@ -29,6 +31,7 @@ export default async function TurmasPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Turmas" description={`${turmas.length} turma(s).`} action={staff ? { href: "/turmas/nova", label: "Nova turma" } : undefined} />
+      <Flash msg={ok} />
       <DataTable head={["Turma", "Professor", "Horário", "Sala", "Vagas", "Status", ""]}>
         {turmas.length === 0 && <EmptyRow colSpan={7}>Nenhuma turma encontrada.</EmptyRow>}
         {turmas.map((t) => (

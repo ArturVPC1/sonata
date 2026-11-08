@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ActionButton } from "@/components/form-bits"
 import { AlunoForm } from "../aluno-form"
 import { MatriculaPanel } from "./matricula-panel"
-import { alternarAluno } from "../actions"
+import { alternarAluno, excluirAluno } from "../actions"
 
 export default async function AlunoPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   await requireUser(STAFF)
@@ -44,6 +44,9 @@ export default async function AlunoPage({ searchParams }: { searchParams: Promis
             confirmText={aluno.ativo ? "Inativar o aluno? As matrículas ativas serão encerradas e o acesso bloqueado." : undefined}
           >
             {aluno.ativo ? "Inativar" : "Reativar"}
+          </ActionButton>
+          <ActionButton variant="destructive" action={excluirAluno.bind(null, aluno.id)} confirmText={`Excluir o aluno ${aluno.nome}? Esta operação é irreversível.`}>
+            Excluir
           </ActionButton>
         </div>
       </div>

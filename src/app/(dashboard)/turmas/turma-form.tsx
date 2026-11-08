@@ -25,25 +25,25 @@ export function TurmaForm({ id, defaults = {}, instrumentos, professores, salas 
           <Input id="nome" name="nome" defaultValue={d("nome")} required />
         </Field>
         <Field label="Instrumento *" name="instrumentoId" error={fe.instrumentoId}>
-          <Select id="instrumentoId" name="instrumentoId" defaultValue={d("instrumentoId") ?? ""} required>
+          <Select key={d("instrumentoId") ?? ""} id="instrumentoId" name="instrumentoId" defaultValue={d("instrumentoId") ?? ""} required>
             <option value="">Selecione…</option>
             {instrumentos.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
           </Select>
         </Field>
         <Field label="Professor *" name="professorId" error={fe.professorId}>
-          <Select id="professorId" name="professorId" defaultValue={d("professorId") ?? ""} required>
+          <Select key={d("professorId") ?? ""} id="professorId" name="professorId" defaultValue={d("professorId") ?? ""} required>
             <option value="">Selecione…</option>
             {professores.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </Select>
         </Field>
         <Field label="Sala" name="salaId" error={fe.salaId}>
-          <Select id="salaId" name="salaId" defaultValue={d("salaId") ?? ""}>
+          <Select key={d("salaId") ?? ""} id="salaId" name="salaId" defaultValue={d("salaId") ?? ""}>
             <option value="">Sem sala definida</option>
             {salas.map((s) => <option key={s.id} value={s.id} disabled={s.manutencao}>{s.nome}{s.manutencao ? " (manutenção)" : ""}</option>)}
           </Select>
         </Field>
         <Field label="Dia da semana *" name="diaSemana" error={fe.diaSemana}>
-          <Select id="diaSemana" name="diaSemana" defaultValue={d("diaSemana") ?? ""} required>
+          <Select key={d("diaSemana") ?? ""} id="diaSemana" name="diaSemana" defaultValue={d("diaSemana") ?? ""} required>
             <option value="">Selecione…</option>
             {DIAS_UTEIS_E_SABADO.map((d) => <option key={d} value={d}>{DIA_LABEL[d]}</option>)}
           </Select>

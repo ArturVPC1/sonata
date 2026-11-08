@@ -43,7 +43,7 @@ export default function LoginPage() {
     setCarregando(false)
 
     if (resultado?.error) {
-      setErro("Email ou senha inválidos.")
+      setErro("E-mail ou senha inválidos.")
     } else {
       router.push("/dashboard")
       router.refresh()

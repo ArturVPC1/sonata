@@ -1,6 +1,5 @@
 "use server"
 
-import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { assertRole, STAFF } from "@/lib/session"
@@ -8,7 +7,8 @@ import { hashPassword } from "@/lib/password"
 import { alunoFormSchema } from "@/lib/validations/aluno"
 import { actionError, formToObject, zodFieldErrors, type FormState } from "@/lib/form-state"
 import { matricular } from "@/lib/matricula"
-import { todayStr } from "@/lib/dates"
+import { todayStr, isDateStr } from "@/lib/dates"
+import { redirectOk } from "@/lib/flash"
 
 export async function salvarAluno(id: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
   try {
@@ -46,10 +46,10 @@ export async function salvarAluno(id: string | null, _prev: FormState, fd: FormD
       })
     }
   } catch (e) {
-    return actionError(e)
+    return actionError(e, { entity: "aluno" })
   }
   revalidatePath("/alunos")
-  redirect("/alunos")
+  redirectOk("/alunos", id ? "Dados do aluno atualizados com sucesso." : "Aluno cadastrado com sucesso.")
 }
 
 export async function alternarAluno(id: string): Promise<FormState> {
@@ -67,18 +67,46 @@ export async function alternarAluno(id: string): Promise<FormState> {
     revalidatePath("/alunos/editar")
     return { ok: true }
   } catch (e) {
-    return actionError(e)
+    return actionError(e, { entity: "aluno" })
   }
 }
 
-export async function matricularAluno(alunoId: string, turmaId: string): Promise<FormState> {
+/** RF003 — exclui o aluno, desde que não haja vínculos ativos (matrículas ativas ou solicitações pendentes). */
+export async function excluirAluno(id: string): Promise<FormState> {
   try {
     await assertRole(STAFF)
+    const a = await prisma.aluno.findUnique({ where: { id } })
+    if (!a) return { error: "Aluno não encontrado." }
+    const [matriculas, pendentes] = await Promise.all([
+      prisma.matricula.count({ where: { alunoId: id, ativo: true } }),
+      prisma.solicitacaoAula.count({ where: { alunoId: id, status: "PENDENTE" } }),
+    ])
+    if (matriculas > 0 || pendentes > 0) return { error: "Não é possível excluir o aluno. Existem vínculos ativos associados a este registro." }
+    await prisma.$transaction(async (tx) => {
+      await tx.solicitacaoAula.deleteMany({ where: { alunoId: id } })
+      await tx.matricula.deleteMany({ where: { alunoId: id } })
+      await tx.pagamento.deleteMany({ where: { alunoId: id } })
+      await tx.aluno.delete({ where: { id } })
+      if (a.usuarioId) await tx.usuario.delete({ where: { id: a.usuarioId } })
+    })
+  } catch (e) {
+    return actionError(e, { entity: "aluno" })
+  }
+  revalidatePath("/alunos")
+  redirectOk("/alunos", "Aluno excluído com sucesso.")
+}
+
+export async function matricularAluno(alunoId: string, turmaId: string, dataInicio?: string): Promise<FormState> {
+  try {
+    await assertRole(STAFF)
+    if (!alunoId) return { error: "Selecione um aluno." }
     if (!turmaId) return { error: "Selecione uma turma." }
-    await matricular(alunoId, turmaId, new Date(`${todayStr()}T00:00:00.000Z`))
+    const inicio = dataInicio && isDateStr(dataInicio) ? dataInicio : todayStr()
+    await matricular(alunoId, turmaId, new Date(`${inicio}T00:00:00.000Z`))
     revalidatePath("/alunos/editar")
     revalidatePath("/turmas")
-    return { ok: true }
+    revalidatePath("/turmas/detalhe")
+    return { ok: true, message: "Aluno matriculado com sucesso." }
   } catch (e) {
     return actionError(e)
   }
@@ -93,6 +121,7 @@ export async function desmatricularAluno(alunoId: string, turmaId: string): Prom
     })
     revalidatePath("/alunos/editar")
     revalidatePath("/turmas")
+    revalidatePath("/turmas/detalhe")
     return { ok: true }
   } catch (e) {
     return actionError(e)

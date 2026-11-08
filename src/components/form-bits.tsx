@@ -69,6 +69,7 @@ export function ActionButton({
 }) {
   const [pending, start] = useTransition()
   const [error, setError] = useState<string>()
+  const [msg, setMsg] = useState<string>()
   return (
     <span className="inline-flex flex-col items-start gap-1">
       <Button
@@ -79,9 +80,11 @@ export function ActionButton({
         onClick={() => {
           if (confirmText && !window.confirm(confirmText)) return
           setError(undefined)
+          setMsg(undefined)
           start(async () => {
             const r = await action()
             if (r && r.error) setError(r.error)
+            else if (r && r.message) setMsg(r.message)
           })
         }}
       >
@@ -90,6 +93,11 @@ export function ActionButton({
       {error && (
         <span className="text-xs text-destructive font-medium" role="alert">
           {error}
+        </span>
+      )}
+      {msg && (
+        <span className="text-xs text-green-700 font-medium" role="status">
+          {msg}
         </span>
       )}
     </span>

@@ -95,3 +95,8 @@ export function overlaps(startA: string, durA: number, startB: string, durB: num
   const a = toMin(startA), b = toMin(startB)
   return a < b + durB && b < a + durA
 }
+
+export const fromMin = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`
+
+/** Duração em minutos entre dois horários HH:mm (negativa se o fim for anterior). */
+export const diffMin = (inicio: string, fim: string) => toMin(fim) - toMin(inicio)

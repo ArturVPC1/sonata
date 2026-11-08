@@ -2,6 +2,7 @@ import type { ZodError } from "zod"
 
 export type FormState = {
   ok?: boolean
+  message?: string
   error?: string
   fieldErrors?: Record<string, string>
   /** valores enviados, para repovoar o formulário após erro (o React 19 reseta o form) */
@@ -41,15 +42,22 @@ export function formToObject(fd: FormData): Record<string, string | undefined> {
   return o
 }
 
-/** Traduz erros conhecidos do Prisma/aplicação em mensagem para o usuário. */
-export function actionError(e: unknown, fallback = "Não foi possível concluir a operação."): FormState {
-  const err = e as { code?: string; message?: string; meta?: { target?: string[] | string } }
+/** Traduz erros conhecidos do Prisma/aplicação em mensagem para o usuário (textos do Apêndice A da monografia). */
+export function actionError(e: unknown, opts: { entity?: "aluno" | "professor" | "sala" | "instrumento"; fallback?: string } = {}): FormState {
+  const err = e as { code?: string; message?: string; meta?: unknown }
   if (err?.code === "P2002") {
     const t = `${JSON.stringify(err.meta ?? {})} ${err.message ?? ""}`.toLowerCase()
-    if (t.includes("cpf")) return { error: "Já existe um aluno com este CPF.", fieldErrors: { cpf: "CPF já cadastrado" } }
+    if (t.includes("cpf")) {
+      const msg = opts.entity === "professor" ? "CPF já vinculado a um professor existente." : "CPF já vinculado a um aluno existente."
+      return { error: msg, fieldErrors: { cpf: msg } }
+    }
     if (t.includes("email")) return { error: "Este e-mail já está em uso.", fieldErrors: { email: "E-mail já cadastrado" } }
+    if (t.includes("nome")) {
+      const msg = opts.entity === "instrumento" ? "Já existe um instrumento com este nome." : "Já existe uma sala com este nome."
+      return { error: msg, fieldErrors: { nome: msg } }
+    }
     return { error: "Já existe um registro com estes dados." }
   }
   if (e instanceof Error && e.message && !err?.code) return { error: e.message }
-  return { error: fallback }
+  return { error: opts.fallback ?? "Não foi possível concluir a operação." }
 }
