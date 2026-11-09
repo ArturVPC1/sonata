@@ -2,6 +2,7 @@ import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { requireUser, isStaff } from "@/lib/session"
 import { fmtDateBR, fmtTime } from "@/lib/dates"
+import { salaEmManutencao } from "@/lib/conflitos"
 import { PageHeader, DataTable, EmptyRow } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Flash } from "@/components/flash"
@@ -29,7 +30,7 @@ export default async function SolicitacoesPage({ searchParams }: { searchParams:
       include: { aluno: true, professor: { include: { usuario: true } }, reserva: { include: { sala: true } } },
       take: 100,
     }),
-    user.role === "ALUNO" ? Promise.resolve([]) : prisma.sala.findMany({ where: { status: "DISPONIVEL" }, orderBy: { nome: "asc" } }),
+    user.role === "ALUNO" ? Promise.resolve([]) : prisma.sala.findMany({ orderBy: { nome: "asc" } }),
   ])
   const pendentesAluno = user.role === "ALUNO" ? lista.filter((s) => s.status === "PENDENTE").length : 0
   return (
@@ -66,7 +67,7 @@ export default async function SolicitacoesPage({ searchParams }: { searchParams:
               <td className="px-4 py-3">{s.tipo === "REPOSICAO" ? "Reposição" : "Aula extra"}</td>
               <td className="px-4 py-3 max-w-xs">{s.motivo}</td>
               <td className="px-4 py-3">{situacao}</td>
-              <td className="px-4 py-3">{s.status === "PENDENTE" ? <DecisaoPanel id={s.id} salas={salas.map((x) => ({ id: x.id, nome: x.nome }))} /> : <span className="text-muted-foreground">—</span>}</td>
+              <td className="px-4 py-3">{s.status === "PENDENTE" ? <DecisaoPanel id={s.id} salas={salas.filter((x) => !salaEmManutencao(x, s.data.toISOString().slice(0, 10))).map((x) => ({ id: x.id, nome: x.nome }))} /> : <span className="text-muted-foreground">—</span>}</td>
             </tr>
           )
         })}

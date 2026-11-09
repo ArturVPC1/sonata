@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { assertRole, STAFF } from "@/lib/session"
 import { hashPassword } from "@/lib/password"
 import { alunoFormSchema } from "@/lib/validations/aluno"
-import { actionError, formToObject, zodFieldErrors, type FormState } from "@/lib/form-state"
+import { actionError, formToObject, zodFieldErrors, type FormState, erroValidacao } from "@/lib/form-state"
 import { matricular } from "@/lib/matricula"
 import { todayStr, isDateStr } from "@/lib/dates"
 import { redirectOk } from "@/lib/flash"
@@ -14,7 +14,7 @@ export async function salvarAluno(id: string | null, _prev: FormState, fd: FormD
   try {
     await assertRole(STAFF)
     const parsed = alunoFormSchema.safeParse(formToObject(fd))
-    if (!parsed.success) return { error: "Corrija os campos destacados.", fieldErrors: zodFieldErrors(parsed.error) }
+    if (!parsed.success) return erroValidacao(parsed.error)
     const { senha, dataNasc, ...v } = parsed.data
     const data = {
       ...v,

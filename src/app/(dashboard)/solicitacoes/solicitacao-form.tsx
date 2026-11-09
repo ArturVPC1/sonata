@@ -20,7 +20,7 @@ export function SolicitacaoForm({ professores, aulas, semTelefone }: { professor
   const sugestoes = (state as SolicitacaoState).sugestoes ?? []
 
   return (
-    <form action={action} className="space-y-6 max-w-3xl">
+    <form action={action} noValidate className="space-y-6 max-w-3xl">
       {semTelefone && (
         <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-800" role="status">
           Atenção: você não possui telefone cadastrado. Atualize seus dados para que a escola possa contatá-lo sobre sua solicitação.

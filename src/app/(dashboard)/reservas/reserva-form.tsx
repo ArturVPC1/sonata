@@ -32,7 +32,7 @@ export function ReservaForm({ id, defaults = {}, salas, professores }: { id: str
   }, [salaId, data, state])
 
   return (
-    <form action={action} className="space-y-6 max-w-3xl">
+    <form action={action} noValidate className="space-y-6 max-w-3xl">
       <FormAlert state={state} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Sala *" name="salaId" error={fe.salaId}>

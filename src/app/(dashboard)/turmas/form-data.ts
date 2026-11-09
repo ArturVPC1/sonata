@@ -9,6 +9,6 @@ export async function opcoesTurma() {
   return {
     instrumentos: instrumentos.map((i) => ({ id: i.id, nome: i.nome })),
     professores: profs.map((p) => ({ id: p.id, nome: p.usuario.nome })),
-    salas: salas.map((s) => ({ id: s.id, nome: s.nome, manutencao: s.status === "MANUTENCAO" })),
+    salas: salas.map((s) => ({ id: s.id, nome: s.nome, manutencao: s.status === "MANUTENCAO" ? (s.manutencaoAte ? "manutenção até " + s.manutencaoAte.toISOString().slice(8, 10) + "/" + s.manutencaoAte.toISOString().slice(5, 7) : "manutenção") : "" })),
   }
 }

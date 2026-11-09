@@ -49,13 +49,13 @@ export async function gerarSemana(data: string): Promise<FormState> {
   }
 }
 
-export async function alternarRealizada(aulaId: string): Promise<FormState> {
+export async function alternarRealizada(aulaId: string, observacao?: string): Promise<FormState> {
   try {
     const user = await assertRole(["ADMIN", "SECRETARIA", "PROFESSOR"])
     const a = await prisma.aula.findUnique({ where: { id: aulaId }, include: { turma: { include: { professor: true } } } })
     if (!a) return { error: "Aula não encontrada." }
     if (user.role === "PROFESSOR" && a.turma.professor.usuarioId !== user.id) return { error: "Você só pode atualizar aulas das suas turmas." }
-    await prisma.aula.update({ where: { id: aulaId }, data: { realizada: !a.realizada } })
+    await prisma.aula.update({ where: { id: aulaId }, data: { realizada: !a.realizada, observacao: a.realizada ? null : observacao?.trim().slice(0, 300) || null } })
     revalidatePath("/agenda")
     return { ok: true }
   } catch (e) {

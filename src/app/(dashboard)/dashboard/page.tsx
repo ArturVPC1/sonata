@@ -38,27 +38,33 @@ export default async function DashboardPage() {
     turmaWhere = { ativo: true, matriculas: { some: { alunoId: al?.id ?? "__none__", ativo: true } } }
   }
 
-  const aulasHoje = await prisma.aula.findMany({
-    where: { data: dayRange(hoje), turma: turmaWhere },
-    include: { turma: { include: { instrumento: true, professor: { include: { usuario: true } }, sala: true } } },
-    orderBy: { data: "asc" },
-  })
-  const minhasTurmas = await prisma.turma.findMany({
-    where: turmaWhere,
-    include: { instrumento: true, sala: true, professor: { include: { usuario: true } }, _count: { select: { matriculas: { where: { ativo: true } } } } },
-    orderBy: { nome: "asc" },
-  })
+  const staff = isStaff(user.role)
+  // Todas as consultas em paralelo (RNF003: o painel precisa carregar em até 3 s)
+  const [aulasHoje, minhasTurmas, contagens] = await Promise.all([
+    prisma.aula.findMany({
+      where: { data: dayRange(hoje), turma: turmaWhere },
+      include: { turma: { include: { instrumento: true, professor: { include: { usuario: true } }, sala: true } } },
+      orderBy: { data: "asc" },
+    }),
+    prisma.turma.findMany({
+      where: turmaWhere,
+      include: { instrumento: true, sala: true, professor: { include: { usuario: true } }, _count: { select: { matriculas: { where: { ativo: true } } } } },
+      orderBy: { nome: "asc" },
+    }),
+    staff
+      ? Promise.all([
+          prisma.aluno.count({ where: { ativo: true } }),
+          prisma.professor.count({ where: { usuario: { ativo: true } } }),
+          prisma.turma.count({ where: { ativo: true } }),
+          prisma.sala.count({ where: { status: "DISPONIVEL" } }),
+        ])
+      : Promise.resolve(null),
+  ])
 
   let kpis: React.ReactNode = null
-  if (isStaff(user.role)) {
-    const [alunos, professores, turmas, salas, ocupadas] = await Promise.all([
-      prisma.aluno.count({ where: { ativo: true } }),
-      prisma.professor.count({ where: { usuario: { ativo: true } } }),
-      prisma.turma.count({ where: { ativo: true } }),
-      prisma.sala.count({ where: { status: "DISPONIVEL" } }),
-      prisma.aula.findMany({ where: { data: dayRange(hoje) }, select: { turma: { select: { salaId: true } } } }),
-    ])
-    const salasOcupadas = new Set(ocupadas.map((a) => a.turma.salaId).filter(Boolean)).size
+  if (staff && contagens) {
+    const [alunos, professores, turmas, salas] = contagens
+    const salasOcupadas = new Set(aulasHoje.map((a) => a.turma.salaId).filter(Boolean)).size
     kpis = (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi titulo="Alunos ativos" valor={alunos} desc="cadastrados" icon={Users} />

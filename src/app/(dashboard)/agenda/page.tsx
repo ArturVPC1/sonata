@@ -25,6 +25,7 @@ type Item = {
   responsavel: string
   status: string
   aulaId?: string
+  obs?: string | null
   meu?: boolean
 }
 
@@ -80,6 +81,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
       responsavel: a.turma.professor.usuario.nome,
       status: a.realizada ? "Realizada" : "Agendada",
       aulaId: a.id,
+      obs: a.observacao,
       meu: user.role === "PROFESSOR" && a.turma.professor.usuarioId === user.id,
     })),
     ...reservasSemana.map((r) => ({
@@ -140,8 +142,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="min-w-0 space-y-4">
           {staff && vista === "dia" && <StaffTools data={data} turmas={turmasAtivas.map((t) => ({ id: t.id, label: `${t.horario} · ${t.nome}` }))} />}
 
           {vista === "dia" ? (
@@ -153,6 +155,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
                   <td className="px-4 py-3">
                     <p className="font-medium">{i.titulo}</p>
                     <p className="text-xs text-muted-foreground">{i.detalhe}</p>
+                    {i.obs && <p className="mt-1 text-xs italic text-muted-foreground">Obs.: {i.obs}</p>}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{i.responsavel}</td>
                   <td className="px-4 py-3 text-muted-foreground">{i.sala}</td>
@@ -185,7 +188,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           )}
         </div>
 
-        <Card className="h-fit">
+        <Card className="h-fit min-w-0">
           <CardHeader>
             <CardTitle className="text-base">Salas no dia</CardTitle>
             <p className="text-xs text-muted-foreground">{ocupacaoSala.size} ocupada(s) · {livres} livre(s)</p>

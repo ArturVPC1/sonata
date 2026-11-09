@@ -13,12 +13,12 @@ import { keepValues, type FormState } from "@/lib/form-state"
 type Opt = { id: string; nome: string }
 export type TurmaDefaults = { nome?: string; instrumentoId?: string; professorId?: string; salaId?: string; diaSemana?: string; horario?: string; duracaoMin?: number; vagas?: number }
 
-export function TurmaForm({ id, defaults = {}, instrumentos, professores, salas }: { id: string | null; defaults?: TurmaDefaults; instrumentos: Opt[]; professores: Opt[]; salas: (Opt & { manutencao: boolean })[] }) {
+export function TurmaForm({ id, defaults = {}, instrumentos, professores, salas }: { id: string | null; defaults?: TurmaDefaults; instrumentos: Opt[]; professores: Opt[]; salas: (Opt & { manutencao: string })[] }) {
   const [state, action] = useActionState<FormState, FormData>(keepValues(salvarTurma, id), {})
   const fe = state.fieldErrors ?? {}
   const d = (k: keyof typeof defaults) => (state.values?.[k as string] ?? (defaults[k] as string | number | undefined)) as string | undefined
   return (
-    <form action={action} className="space-y-6 max-w-3xl">
+    <form action={action} noValidate className="space-y-6 max-w-3xl">
       <FormAlert state={state} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nome da turma *" name="nome" error={fe.nome} className="space-y-2 sm:col-span-2">
@@ -39,7 +39,7 @@ export function TurmaForm({ id, defaults = {}, instrumentos, professores, salas 
         <Field label="Sala" name="salaId" error={fe.salaId}>
           <Select key={d("salaId") ?? ""} id="salaId" name="salaId" defaultValue={d("salaId") ?? ""}>
             <option value="">Sem sala definida</option>
-            {salas.map((s) => <option key={s.id} value={s.id} disabled={s.manutencao}>{s.nome}{s.manutencao ? " (manutenção)" : ""}</option>)}
+            {salas.map((s) => <option key={s.id} value={s.id}>{s.nome}{s.manutencao ? " (" + s.manutencao + ")" : ""}</option>)}
           </Select>
         </Field>
         <Field label="Dia da semana *" name="diaSemana" error={fe.diaSemana}>

@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { assertRole, STAFF } from "@/lib/session"
 import { instrumentoFormSchema } from "@/lib/validations/sala"
-import { actionError, formToObject, zodFieldErrors, type FormState } from "@/lib/form-state"
+import { actionError, formToObject, zodFieldErrors, type FormState, erroValidacao } from "@/lib/form-state"
 import { redirectOk } from "@/lib/flash"
 
 export async function salvarInstrumento(id: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
   try {
     await assertRole(STAFF)
     const parsed = instrumentoFormSchema.safeParse(formToObject(fd))
-    if (!parsed.success) return { error: "Corrija os campos destacados.", fieldErrors: zodFieldErrors(parsed.error) }
+    if (!parsed.success) return erroValidacao(parsed.error)
     if (id) await prisma.instrumento.update({ where: { id }, data: parsed.data })
     else await prisma.instrumento.create({ data: parsed.data })
   } catch (e) {

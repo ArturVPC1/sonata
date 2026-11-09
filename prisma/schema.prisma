@@ -175,6 +175,8 @@ model Aula {
   createdAt  DateTime @default(now())
 
   solicitacoes SolicitacaoAula[]
+
+  @@unique([turmaId, data])
 }
 
 model Pagamento {

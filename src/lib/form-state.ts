@@ -23,13 +23,25 @@ export function keepValues<A extends unknown[]>(
   }
 }
 
+export const MSG_OBRIGATORIOS = "Preencha todos os campos obrigatórios."
+const MSG_ZERO = "Informe uma duração e um número de vagas maiores que zero."
+
+const faltando = (i: ZodError["issues"][number]) => i.code === "invalid_type" && (i as { received?: string }).received === "undefined"
+
 export function zodFieldErrors(err: ZodError): Record<string, string> {
   const out: Record<string, string> = {}
   for (const issue of err.issues) {
     const key = issue.path.join(".") || "_"
-    if (!out[key]) out[key] = issue.message
+    if (!out[key]) out[key] = faltando(issue) && issue.message === "Required" ? "Campo obrigatório" : issue.message
   }
   return out
+}
+
+/** Erro de validação com a mensagem geral do Apêndice A (campos vazios) ou a dos campos destacados. */
+export function erroValidacao(err: ZodError): FormState {
+  const zero = err.issues.find((i) => i.message === MSG_ZERO)
+  const vazio = err.issues.some(faltando)
+  return { error: vazio ? MSG_OBRIGATORIOS : zero ? MSG_ZERO : "Corrija os campos destacados.", fieldErrors: zodFieldErrors(err) }
 }
 
 /** FormData -> objeto simples; strings vazias viram undefined. */

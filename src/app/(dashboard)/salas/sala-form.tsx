@@ -17,7 +17,7 @@ export function SalaForm({ id, defaults = {} }: { id: string | null; defaults?: 
   const d = (k: keyof SalaDefaults) => (state.values?.[k] ?? (defaults[k] as string | number | undefined)) as string | undefined
   const [status, setStatus] = useState(d("status") ?? "DISPONIVEL")
   return (
-    <form action={action} className="space-y-6 max-w-2xl">
+    <form action={action} noValidate className="space-y-6 max-w-2xl">
       <FormAlert state={state} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nome da sala *" name="nome" error={fe.nome}>

@@ -12,7 +12,7 @@ export function InstrumentoForm({ id, nome, compact }: { id: string | null; nome
   const [state, action] = useActionState<FormState, FormData>(keepValues(salvarInstrumento, id), {})
   const fe = state.fieldErrors ?? {}
   return (
-    <form action={action} className="space-y-3 max-w-xl">
+    <form action={action} noValidate className="space-y-3 max-w-xl">
       <FormAlert state={state} />
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Nome do instrumento *" name="nome" error={fe.nome} className="space-y-2 flex-1 min-w-[200px]">

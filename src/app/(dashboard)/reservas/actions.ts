@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { assertRole, STAFF } from "@/lib/session"
 import { reservaFormSchema } from "@/lib/validations/reserva"
-import { actionError, formToObject, zodFieldErrors, type FormState } from "@/lib/form-state"
+import { actionError, formToObject, zodFieldErrors, type FormState, erroValidacao } from "@/lib/form-state"
 import { diffMin, fmtTime, fromMin, dayRange, diaSemanaOf, toDbDateTime, toMin, todayStr } from "@/lib/dates"
 import { MSG_CONFLITO_SALA, ocupacoesDoDia, conflita, salaEmManutencao } from "@/lib/conflitos"
 import { redirectOk } from "@/lib/flash"
@@ -28,7 +28,7 @@ export async function criarReserva(_prev: FormState, fd: FormData): Promise<Form
   try {
     const user = await assertRole(["ADMIN", "SECRETARIA", "PROFESSOR"])
     const parsed = reservaFormSchema.safeParse(formToObject(fd))
-    if (!parsed.success) return { error: parsed.error.issues.find((i) => i.path[0] === "fim")?.message ?? "Corrija os campos destacados.", fieldErrors: zodFieldErrors(parsed.error) }
+    if (!parsed.success) { const e = erroValidacao(parsed.error); return { ...e, error: parsed.error.issues.find((i) => i.path[0] === "fim")?.message ?? e.error } }
     const v = parsed.data
     if (v.data < todayStr()) return { error: "A data da reserva não pode ser anterior a hoje.", fieldErrors: { data: "Data anterior a hoje" } }
 
@@ -60,8 +60,9 @@ export async function reagendarReserva(id: string, _prev: FormState, fd: FormDat
     if (!atual || atual.status !== "ATIVA") return { error: "Reserva não encontrada ou já cancelada." }
     const raw = formToObject(fd)
     const parsed = reservaFormSchema.safeParse({ ...raw, salaId: atual.salaId, tipo: atual.tipo })
-    if (!parsed.success) return { error: parsed.error.issues.find((i) => i.path[0] === "fim")?.message ?? "Corrija os campos destacados.", fieldErrors: zodFieldErrors(parsed.error) }
+    if (!parsed.success) { const e = erroValidacao(parsed.error); return { ...e, error: parsed.error.issues.find((i) => i.path[0] === "fim")?.message ?? e.error } }
     const v = parsed.data
+    if (v.data < todayStr()) return { error: "A data da reserva não pode ser anterior a hoje.", fieldErrors: { data: "Data anterior a hoje" } }
     const dur = diffMin(v.inicio, v.fim)
     const conflito = await verificarConflitos({ salaId: atual.salaId, professorId: atual.professorId, data: v.data, inicio: v.inicio, dur, ignoreReservaId: id })
     if (conflito) return { error: conflito }
@@ -83,12 +84,12 @@ export async function cancelarReserva(id: string): Promise<FormState> {
     const pode = user.role === "ADMIN" || user.role === "SECRETARIA" || r.criadoPorId === user.id
     if (!pode) return { error: "Você não possui permissão para cancelar esta reserva." }
     await prisma.reserva.update({ where: { id }, data: { status: "CANCELADA" } })
-    revalidatePath("/reservas")
-    revalidatePath("/agenda")
-    return { ok: true, message: "Reserva cancelada com sucesso." }
   } catch (e) {
     return actionError(e)
   }
+  revalidatePath("/reservas")
+  revalidatePath("/agenda")
+  redirectOk("/reservas", "Reserva cancelada com sucesso.")
 }
 
 /** Ocupação da sala em uma data, em ordem de horário (grade exibida no formulário). */

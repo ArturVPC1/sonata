@@ -19,7 +19,7 @@ export function AlunoForm({ id, defaults = {} }: { id: string | null; defaults?:
   const fe = state.fieldErrors ?? {}
   const d = (k: keyof typeof defaults) => (state.values?.[k as string] ?? (defaults[k] as string | number | undefined)) as string | undefined
   return (
-    <form action={action} className="space-y-6 max-w-3xl">
+    <form action={action} noValidate className="space-y-6 max-w-3xl">
       <FormAlert state={state} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nome completo *" name="nome" error={fe.nome}>

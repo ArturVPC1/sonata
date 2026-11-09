@@ -5,14 +5,14 @@ import { prisma } from "@/lib/prisma"
 import { assertRole, STAFF } from "@/lib/session"
 import { hashPassword } from "@/lib/password"
 import { professorFormSchema } from "@/lib/validations/professor"
-import { actionError, formToObject, zodFieldErrors, type FormState } from "@/lib/form-state"
+import { actionError, formToObject, zodFieldErrors, type FormState, erroValidacao } from "@/lib/form-state"
 import { redirectOk } from "@/lib/flash"
 
 export async function salvarProfessor(id: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
   try {
     await assertRole(STAFF)
     const parsed = professorFormSchema.safeParse(formToObject(fd))
-    if (!parsed.success) return { error: "Corrija os campos destacados.", fieldErrors: zodFieldErrors(parsed.error) }
+    if (!parsed.success) return erroValidacao(parsed.error)
     const { senha, nome, email, cpf, telefone, endereco, registroProfissional, bio } = parsed.data
     const perfil = { cpf, telefone, endereco, registroProfissional: registroProfissional ?? null, bio: bio ?? null }
 

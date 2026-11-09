@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { assertRole } from "@/lib/session"
 import { solicitacaoFormSchema, LIMITE_PENDENTES } from "@/lib/validations/reserva"
-import { actionError, formToObject, zodFieldErrors, type FormState } from "@/lib/form-state"
-import { fmtTime, toDbDateTime, todayStr, fmtDateBR } from "@/lib/dates"
+import { actionError, formToObject, zodFieldErrors, type FormState, erroValidacao } from "@/lib/form-state"
+import { fmtTime, toDbDateTime, todayStr, fmtDateBR, nowMinutes, toMin } from "@/lib/dates"
 import { ocupacoesDoDia, conflita, salaEmManutencao, sugerirHorarios } from "@/lib/conflitos"
 import { notificar, idsDaEquipe } from "@/lib/notificar"
 import { redirectOk } from "@/lib/flash"
@@ -23,9 +23,11 @@ export async function solicitarAula(_prev: SolicitacaoState, fd: FormData): Prom
     if (!aluno) return { error: "Seu usuário não está vinculado a um cadastro de aluno. Procure a secretaria." }
 
     const parsed = solicitacaoFormSchema.safeParse(formToObject(fd))
-    if (!parsed.success) return { error: "Corrija os campos destacados.", fieldErrors: zodFieldErrors(parsed.error) }
+    if (!parsed.success) return erroValidacao(parsed.error)
     const v = parsed.data
     if (v.data < todayStr()) return { error: "A data da aula não pode ser anterior a hoje.", fieldErrors: { data: "Data anterior a hoje" } }
+
+    if (v.data === todayStr() && toMin(v.inicio) <= nowMinutes()) return { error: "O horário solicitado já passou. Escolha um horário futuro.", fieldErrors: { inicio: "Horário já passou" } }
 
     // RF031 — limite de solicitações pendentes
     const pendentes = await prisma.solicitacaoAula.count({ where: { alunoId: aluno.id, status: "PENDENTE" } })
@@ -109,13 +111,13 @@ export async function aprovarSolicitacao(id: string, salaId: string): Promise<Fo
     if (s.aluno.usuarioId) {
       await notificar([s.aluno.usuarioId], `Sua solicitação para ${fmtDateBR(s.data)} às ${inicio} foi aprovada (sala ${sala.nome}).`, "/solicitacoes")
     }
-    revalidatePath("/solicitacoes")
-    revalidatePath("/reservas")
-    revalidatePath("/agenda")
-    return { ok: true, message: "Solicitação aprovada com sucesso." }
   } catch (e) {
     return actionError(e)
   }
+  revalidatePath("/solicitacoes")
+  revalidatePath("/reservas")
+  revalidatePath("/agenda")
+  redirectOk("/solicitacoes", "Solicitação aprovada com sucesso.")
 }
 
 export async function rejeitarSolicitacao(id: string, justificativa: string): Promise<FormState> {
@@ -126,11 +128,11 @@ export async function rejeitarSolicitacao(id: string, justificativa: string): Pr
     if (s.aluno.usuarioId) {
       await notificar([s.aluno.usuarioId], `Sua solicitação para ${fmtDateBR(s.data)} às ${fmtTime(s.data)} foi rejeitada. Motivo: ${justificativa.trim()}`, "/solicitacoes")
     }
-    revalidatePath("/solicitacoes")
-    return { ok: true, message: "Solicitação rejeitada com sucesso." }
   } catch (e) {
     return actionError(e)
   }
+  revalidatePath("/solicitacoes")
+  redirectOk("/solicitacoes", "Solicitação rejeitada com sucesso.")
 }
 
 export async function marcarNotificacoesLidas(): Promise<FormState> {

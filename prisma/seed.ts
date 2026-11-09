@@ -5,12 +5,12 @@
  *   SEED_DATE=2026-11-30 npx prisma db seed   # data de referência da apresentação
  *
  * Todas as contas de demonstração usam a senha 123456 (apenas para a apresentação).
- * Aulas são geradas de 3 semanas antes até 2 semanas depois de SEED_DATE.
+ * Aulas são geradas de 3 semanas antes até 2 semanas depois de SEED_DATE; "realizada" vale só para datas anteriores a hoje.
  */
 import type { DiaSemana } from "@prisma/client"
 import { prisma } from "../src/lib/prisma"
 import { hashPassword } from "../src/lib/password"
-import { addDays, diaSemanaOf, toDbDateTime } from "../src/lib/dates"
+import { addDays, diaSemanaOf, toDbDateTime, todayStr } from "../src/lib/dates"
 
 const SENHA_DEMO = "123456"
 const REF = process.env.SEED_DATE ?? "2026-11-30"
@@ -19,12 +19,13 @@ async function main() {
   const senhaHash = await hashPassword(SENHA_DEMO)
 
   // ---------- Usuários de apoio ----------
-  // Admin: só cria se não existir (não redefine a senha de quem já usa o sistema)
-  await prisma.usuario.upsert({
-    where: { email: "admin@exemplo.com" },
-    update: {},
-    create: { nome: "Administrador", email: "admin@exemplo.com", senhaHash, role: "ADMIN" },
-  })
+  // Admin: cria se não existir; só regrava a senha se ela ainda não estiver em bcrypt (hash legado do SQL de seed)
+  const admin = await prisma.usuario.findUnique({ where: { email: "admin@exemplo.com" } })
+  if (!admin) {
+    await prisma.usuario.create({ data: { nome: "Administrador", email: "admin@exemplo.com", senhaHash, role: "ADMIN" } })
+  } else if (!admin.senhaHash.startsWith("$2")) {
+    await prisma.usuario.update({ where: { id: admin.id }, data: { senhaHash } })
+  }
   await prisma.usuario.upsert({
     where: { email: "secretaria@exemplo.com" },
     update: { senhaHash, ativo: true },
@@ -154,11 +155,10 @@ async function main() {
     const dia = diaSemanaOf(d)
     for (const t of turmas.filter((x) => x.dia === dia)) {
       const id = `aula_${t.id}_${d.replace(/-/g, "")}`
-      await prisma.aula.upsert({
-        where: { id },
-        update: {},
-        create: { id, turmaId: t.id, data: toDbDateTime(d, t.horario), realizada: d < REF },
-      })
+      const data = toDbDateTime(d, t.horario)
+      // Não duplica: se já existe aula da turma nesse horário (com qualquer id), mantém a existente
+      const ja = await prisma.aula.findFirst({ where: { turmaId: t.id, data } })
+      if (!ja) await prisma.aula.create({ data: { id, turmaId: t.id, data, realizada: d < todayStr() } })
       criadas++
     }
   }

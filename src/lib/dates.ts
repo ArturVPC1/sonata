@@ -100,3 +100,10 @@ export const fromMin = (m: number) => `${String(Math.floor(m / 60)).padStart(2, 
 
 /** Duração em minutos entre dois horários HH:mm (negativa se o fim for anterior). */
 export const diffMin = (inicio: string, fim: string) => toMin(fim) - toMin(inicio)
+
+/** Próxima data (a partir de hoje, inclusive) em que cai o dia da semana informado. */
+export function proximaDataDoDia(dia: DiaSemanaKey, desde = todayStr()): string {
+  let d = desde
+  for (let i = 0; i < 7 && diaSemanaOf(d) !== dia; i++) d = addDays(d, 1)
+  return d
+}
